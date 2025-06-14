@@ -441,9 +441,9 @@ class Multask_Wrapper:
             target_file = list(glob(self.checkpoint_dir + task + '*.pth'))[0]
             print('loading ', target_file)
             try:
-                self.MLPs[i].load_state_dict(torch.load(target_file))
+                self.MLPs[i].load_state_dict(torch.load(target_file, map_location=torch.device('cpu')))
             except:
-                self.MLPs[i].load_state_dict(remove_module(torch.load(target_file)))
+                self.MLPs[i].load_state_dict(remove_module(torch.load(target_file, map_location=torch.device('cpu'))))
 
     def needToSave(self):
         if self.cur_metric > self.optimal_metric:
