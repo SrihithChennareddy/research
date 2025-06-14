@@ -178,8 +178,8 @@ class MLP(nn.Module):
         B = fcn.dense2[2].weight.view(self.out_size, self.fil_num, 1, 1, 1)
         C = fcn.dense1[1].bias
         D = fcn.dense2[2].bias
-        fcn.dense1[1] = nn.Conv3d(self.in_size//(6*6*6), self.fil_num, 6, 1, 0).cuda()
-        fcn.dense2[2] = nn.Conv3d(self.fil_num, self.out_size, 1, 1, 0).cuda()
+        fcn.dense1[1] = nn.Conv3d(self.in_size//(6*6*6), self.fil_num, 6, 1, 0)
+        fcn.dense2[2] = nn.Conv3d(self.fil_num, self.out_size, 1, 1, 0)
         fcn.dense1[1].weight = nn.Parameter(A)
         fcn.dense2[2].weight = nn.Parameter(B)
         fcn.dense1[1].bias = nn.Parameter(C)
