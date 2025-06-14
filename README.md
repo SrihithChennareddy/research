@@ -11,25 +11,16 @@ We demonstrated that the framework compares favorably with the diagnostic perfor
 
 ### Prerequisites
 
-The tool was developed using the following dependencies:
+Run below command to install required packages
 
-1. PyTorch (1.10 or greater).
-2. NumPy (1.19 or greater).
-3. tqdm (4.31 or greater).
-4. nibabel (3.2 or greater).
-5. matplotlib (3.3 or greater).
-6. scikit-learn (0.23 or greater).
-7. scipy (1.5.4 or greater).
-8. shap (0.37 or greater).
-9. xgboost (1.3.3 or greater).
-10. catboost (0.24 or greater).
-
-Please note that the dependencies may require Python 3.6 or greater. It is recommended to install and maintain all packages using [`conda`](https://www.anaconda.com/) or [`pip`](https://pypi.org/project/pip/). For installation of GPU accelerated PyTorch, additional effort may be required. Please check the official websites of [PyTorch](https://pytorch.org/get-started/locally/) and [CUDA](https://developer.nvidia.com/cuda-downloads) for detailed instructions.
+```bash
+pip install -r requirements.txt
+```
 
 ### Installation
 Recommend to only clone the last version to avoid getting all commits during the development stage. 
 ```bash
-git clone --depth 1 https://github.com/vkola-lab/ncomms2022.git
+git clone --depth 1 git@github.com:SrihithChennareddy/research.git
 ```
 
 ## Documentation
