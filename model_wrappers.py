@@ -430,7 +430,8 @@ class Multask_Wrapper:
     def load_backbone_Weights(self):
         target_file = list(glob(self.checkpoint_dir + 'backbone*.pth'))[0]
         print('loading ', target_file)
-        weights = torch.load(target_file, map_location=lambda storage, loc: storage.cuda(self.device))
+	weights = torch.load(target_file, map_location='cpu')
+
         try:
             self.backbone.load_state_dict(weights)
         except:
