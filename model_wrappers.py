@@ -30,14 +30,20 @@ Example Usage:
     model.train()                                                            # train the model
     thres = model.get_optimal_thres()                                        # get optimal threshold
     model.gen_score(['test'], thres)                                         # generate csv files to future evaluation
-    
+
 for more details how this class is called, please see main.py
 """
 
 
 class Multask_Wrapper:
-    def __init__(self, tasks, device, main_config, task_config, seed, loading_data=True):
-
+    def __init__(
+            self,
+            tasks,
+            device,
+            main_config,
+            task_config,
+            seed,
+            loading_data=True):
         """
 
         inside the __init__() method:
@@ -66,14 +72,22 @@ class Multask_Wrapper:
         # some constants
         self.device = device                                  # GPU device idx
         self.seed = seed                                      # random seed number
-        self.optimal_metric = 0                               # the optimal metric value during training
-        self.cur_metric = 0                                   # current metric value, if cur_metric > optimal_metric, save weights
-        self.num_epochs = task_config['backbone']['epochs']   # number of epochs to train the model
-        self.model_name = main_config['model_name']           # user assigned model_name, will create folder using model_name to log
-        self.csv_dir = main_config['csv_dir']                 # data will be loaded from the csv files specified in this directory
-        self.config = task_config                             # task_config contains task specific info
-        self.n_tasks = len(tasks)                             # number of tasks will be trained
-        self.tasks = tasks                                    # a list of tasks names to be trained
+        # the optimal metric value during training
+        self.optimal_metric = 0
+        # current metric value, if cur_metric > optimal_metric, save weights
+        self.cur_metric = 0
+        # number of epochs to train the model
+        self.num_epochs = task_config['backbone']['epochs']
+        # user assigned model_name, will create folder using model_name to log
+        self.model_name = main_config['model_name']
+        # data will be loaded from the csv files specified in this directory
+        self.csv_dir = main_config['csv_dir']
+        # task_config contains task specific info
+        self.config = task_config
+        # number of tasks will be trained
+        self.n_tasks = len(tasks)
+        # a list of tasks names to be trained
+        self.tasks = tasks
 
         # --------------------------------------------------------------------------------------------------------------
         # folders preparation to save checkpoints of model weights *.pth
@@ -100,22 +114,29 @@ class Multask_Wrapper:
 
         for task in tasks:
             if task not in self.config:                     # if the task was not specified in the self.config
-                self.config[task] = self.config['default']  # use default task setting
-        self.MLPs = [MLP(self.backbone.size, self.config[t]).to(self.device) for t in tasks]
+                # use default task setting
+                self.config[task] = self.config['default']
+        self.MLPs = [MLP(self.backbone.size, self.config[t]
+                         ).to(self.device) for t in tasks]
         print(self.MLPs)
 
         # --------------------------------------------------------------------------------------------------------------
         # loss and optimizer
         self.losses = self.get_losses(tasks)
-        self.backbone_optim = optim.Adam(self.backbone.parameters(), lr=self.config['backbone']['lr'], betas=(0.5, 0.999))
-        self.MLPs_optim = [optim.Adam(self.MLPs[i].parameters(), lr=self.config[tasks[i]]['lr']) for i in range(self.n_tasks)]
+        self.backbone_optim = optim.Adam(
+            self.backbone.parameters(),
+            lr=self.config['backbone']['lr'],
+            betas=(
+                0.5,
+                0.999))
+        self.MLPs_optim = [optim.Adam(self.MLPs[i].parameters(
+        ), lr=self.config[tasks[i]]['lr']) for i in range(self.n_tasks)]
 
         # --------------------------------------------------------------------------------------------------------------
         # prepare train dataloaders
         if loading_data:
             self.train_dataloaders = []
             self.prepare_dataloader()
-
 
     def train(self):
         self.writer = SummaryWriter(self.tb_log_dir)
@@ -125,7 +146,6 @@ class Multask_Wrapper:
             if self.needToSave():
                 self.saveWeights()
             self.adjust_learning_rate()
-
 
     def get_optimal_thres(self, csv_name='valid'):
         """
@@ -151,15 +171,28 @@ class Multask_Wrapper:
         thres = {}
         for i, task in enumerate(self.tasks):
             if task == 'COG' and self.config['COG']['type'] == 'reg':
-                thres['NC'], thres['DE'] = COG_thresholding(self.tb_log_dir + csv_name + '_eval.csv')
+                thres['NC'], thres['DE'] = COG_thresholding(
+                    self.tb_log_dir + csv_name + '_eval.csv')
             elif task == 'ADD':
-                thres[task] = ADD_thresholding(self.tb_log_dir + csv_name + '_eval.csv')
+                thres[task] = ADD_thresholding(
+                    self.tb_log_dir + csv_name + '_eval.csv')
             else:
                 print("optimal for the task {} is not supported yet".format(task))
         return thres
 
-
-    def gen_score(self, stages=['train', 'valid', 'test', 'OASIS'], thres={'ADD':0.5, 'NC':0.5, 'DE':1.5}, load_weight=True, join=True):
+    def gen_score(
+            self,
+            stages=[
+                'train',
+                'valid',
+                'test',
+                'OASIS'],
+            thres={
+                'ADD': 0.5,
+                'NC': 0.5,
+                'DE': 1.5},
+        load_weight=True,
+            join=True):
         """
         gen_score will write model's predictions into a csv file for future model evaluation
 
@@ -198,12 +231,19 @@ class Multask_Wrapper:
         with torch.no_grad():
             for stage in stages:
                 content = []
-                dataloader = DataLoader(Test_Data(self.csv_dir + stage + '.csv'), batch_size=1, shuffle=False)
+                dataloader = DataLoader(
+                    Test_Data(
+                        self.csv_dir +
+                        stage +
+                        '.csv'),
+                    batch_size=1,
+                    shuffle=False)
                 for mri, name in dataloader:
                     case = {'filename': name[0].split('/')[-1]}
                     middle = self.backbone(mri.to(self.device))
                     for i, task in enumerate(self.tasks):
-                        output = self.MLPs[i](middle).data.cpu().squeeze().numpy()
+                        output = self.MLPs[i](
+                            middle).data.cpu().squeeze().numpy()
                         if task == 'COG':
                             case[task + '_score'] = output
                             if output < thres['NC']:
@@ -214,57 +254,95 @@ class Multask_Wrapper:
                                 case[task + '_pred'] = 2
                         else:
                             case[task + '_score'] = softmax(output)[1]
-                            case[task + '_pred'] = 0 if softmax(output)[1] < thres['ADD'] else 1
+                            case[task +
+                                 '_pred'] = 0 if softmax(output)[1] < thres['ADD'] else 1
                     content.append(case)
                 with open(self.tb_log_dir + stage + '_eval.csv', 'w') as csvfile:
-                    writer = csv.DictWriter(csvfile, fieldnames=list(content[0].keys()))
+                    writer = csv.DictWriter(
+                        csvfile, fieldnames=list(
+                            content[0].keys()))
                     writer.writeheader()
                     for case in content:
                         writer.writerow(case)
                 if join:
-                    # join the original table with this currently generated to add labels
-                    extra_content = pd.read_csv(self.csv_dir + stage + '.csv')[["COG", "ADD", "filename"]]
-                    content = pd.read_csv(self.tb_log_dir + stage + '_eval.csv')
-                    result = pd.merge(content, extra_content, how="left", on=["filename"])
-                    result.to_csv(self.tb_log_dir + stage + '_eval.csv', index=False)
+                    # join the original table with this currently generated to
+                    # add labels
+                    extra_content = pd.read_csv(
+                        self.csv_dir + stage + '.csv')[["COG", "ADD", "filename"]]
+                    content = pd.read_csv(
+                        self.tb_log_dir + stage + '_eval.csv')
+                    result = pd.merge(
+                        content, extra_content, how="left", on=["filename"])
+                    result.to_csv(
+                        self.tb_log_dir +
+                        stage +
+                        '_eval.csv',
+                        index=False)
 
-    def gen_embd(self, stages=['test'], layer='early', load_weight=True, join=True, fold=0):
+    def gen_embd(
+            self,
+            stages=['test'],
+            layer='early',
+            load_weight=True,
+            join=True,
+            fold=0):
         """
         gen_embd will save model's embeddings as numpy array
-	the input of MLP model will be considered as embedding
+        the input of MLP model will be considered as embedding
         """
         self.set_train_status(False)
         if load_weight:
             self.loadWeights()
         with torch.no_grad():
             for stage in stages:
-                dataloader = DataLoader(Test_Data(self.csv_dir + stage + '.csv'), batch_size=1, shuffle=False)
+                dataloader = DataLoader(
+                    Test_Data(
+                        self.csv_dir +
+                        stage +
+                        '.csv'),
+                    batch_size=1,
+                    shuffle=False)
                 for mri, name in dataloader:
                     case = {'filename': name[0].split('/')[-1]}
                     middle = self.backbone(mri.to(self.device))
                     if layer == 'late':
-                        middle0 = self.MLPs[0](middle, get_intermediate_score=False).data.cpu().squeeze().numpy()
-                        middle1 = self.MLPs[1](middle, get_intermediate_score=False).data.cpu().squeeze().numpy()
-                        middle = np.concatenate(([middle0], softmax(middle1)[1:]))
+                        middle0 = self.MLPs[0](
+                            middle, get_intermediate_score=False).data.cpu().squeeze().numpy()
+                        middle1 = self.MLPs[1](
+                            middle, get_intermediate_score=False).data.cpu().squeeze().numpy()
+                        middle = np.concatenate(
+                            ([middle0], softmax(middle1)[1:]))
                         print(middle.shape, case['filename'])
-                        np.save("./t_SNE/late_embeddings/"+case['filename'], middle)
+                        np.save(
+                            "./t_SNE/late_embeddings/" +
+                            case['filename'],
+                            middle)
                     elif layer == 'mid':
-                        middle0 = self.MLPs[0](middle, get_intermediate_score=True).data.cpu().squeeze().numpy()
-                        middle1 = self.MLPs[1](middle, get_intermediate_score=True).data.cpu().squeeze().numpy()
+                        middle0 = self.MLPs[0](
+                            middle, get_intermediate_score=True).data.cpu().squeeze().numpy()
+                        middle1 = self.MLPs[1](
+                            middle, get_intermediate_score=True).data.cpu().squeeze().numpy()
                         middle = np.concatenate((middle0, middle1))
                         print(middle.shape, case['filename'])
-                        np.save("./t_SNE/mid_embeddings/"+case['filename'], middle)
+                        np.save(
+                            "./t_SNE/mid_embeddings/" +
+                            case['filename'],
+                            middle)
                     elif layer == 'early':
                         middle = middle.data.cpu().squeeze().numpy().ravel()
                         print(middle.shape)
-                        np.save("./t_SNE/early_embeddings/"+case['filename'], middle)
+                        np.save(
+                            "./t_SNE/early_embeddings/" +
+                            case['filename'],
+                            middle)
                     else:
                         print('bad')
-            
+
     def shap(self, task_idx=1):
         path = '/data_2/sq/'
         print("started the shap analysis for the CNN model respect to MRI ... ")
-        if not os.path.exists(path + 'shap/'): # create the folder for storing shap heatmaps
+        if not os.path.exists(
+                path + 'shap/'):  # create the folder for storing shap heatmaps
             os.mkdir(path + 'shap/')
         task = self.tasks[task_idx]
         print("explaining the {} task".format(task))
@@ -273,34 +351,49 @@ class Multask_Wrapper:
         model = Model(self.backbone, self.MLPs[task_idx], task).to(self.device)
         # get some background cases to initialize the explainer
         background = []
-        data = Test_Data(csv_file = self.csv_dir + task + '_shap_background.csv')
+        data = Test_Data(csv_file=self.csv_dir + task + '_shap_background.csv')
         dataloader = DataLoader(data, batch_size=1, shuffle=False)
         for mri, name in dataloader:
             background.append(mri)
         background = torch.cat(background, 0).to(self.device)
-        print("to initialize shap explainer, background shape is ", background.shape)
+        print(
+            "to initialize shap explainer, background shape is ",
+            background.shape)
         e = shap.DeepExplainer(model, background)
         del background
         print("deep explainer successfully initialized")
         # explain the data and save as numpy array
-        data = Test_Data(csv_file = self.csv_dir + 'test.csv')
+        data = Test_Data(csv_file=self.csv_dir + 'test.csv')
         dataloader = DataLoader(data, batch_size=1, shuffle=False)
         for mri, name in dataloader:
             mri = mri.to(self.device)
             name = name[0].split('/')[-1]
             shap_value = e.shap_values(mri)
             if task == 'ADD':
-                print('shap_value\'s shape for the AD probability is', shap_value[1].shape)
-                print('saved numpy array size is ', shap_value[1].squeeze().shape)
-                np.save(path + 'shap/shap_{}_{}'.format(task, name), shap_value[1].squeeze())
+                print(
+                    'shap_value\'s shape for the AD probability is',
+                    shap_value[1].shape)
+                print(
+                    'saved numpy array size is ',
+                    shap_value[1].squeeze().shape)
+                np.save(path + 'shap/shap_{}_{}'.format(task, name),
+                        shap_value[1].squeeze())
             elif task == 'COG':
                 # print('shap_value\'s shape for the COG score is', shap_value.shape)
                 # print('after summing over channel dimension, shape is', shap_value.squeeze().sum(0).shape)
-                np.save(path + 'shap_mid/shap_{}_{}'.format(task, name), shap_value.squeeze().sum(0))
+                np.save(path + 'shap_mid/shap_{}_{}'.format(task, name),
+                        shap_value.squeeze().sum(0))
 
-    def shap_mid(self, task_idx=1, path='/data_2/sq/', file='test.csv', background_idx=1, layer='block2conv'):
+    def shap_mid(
+            self,
+            task_idx=1,
+            path='/data_2/sq/',
+            file='test.csv',
+            background_idx=1,
+            layer='block2conv'):
         print("started the shap analysis for the CNN model respect to the {} layer's input ... ".format(layer))
-        if not os.path.exists(path): # create the folder for storing shap heatmaps
+        if not os.path.exists(
+                path):  # create the folder for storing shap heatmaps
             os.mkdir(path)
         task = self.tasks[task_idx]
         print("explaining the {} task".format(task))
@@ -309,20 +402,29 @@ class Multask_Wrapper:
         model = Model(self.backbone, self.MLPs[task_idx], task).to(self.device)
         # get some background cases to initialize the explainer
         background = []
-        data = Test_Data(csv_file=self.csv_dir + task + '_shap_background{}.csv'.format(background_idx))
+        data = Test_Data(
+            csv_file=self.csv_dir +
+            task +
+            '_shap_background{}.csv'.format(background_idx))
         dataloader = DataLoader(data, batch_size=1, shuffle=False)
         for mri, _ in dataloader:
             background.append(mri)
         background = torch.cat(background, 0).to(self.device)
-        print("to initialize shap explainer, background shape is ", background.shape)
+        print(
+            "to initialize shap explainer, background shape is ",
+            background.shape)
         if layer == 'block2conv':
-            e = shap.DeepExplainer((model, model.backbone.block2.conv), background)
+            e = shap.DeepExplainer(
+                (model, model.backbone.block2.conv), background)
         elif layer == 'block2pooling':
-            e = shap.DeepExplainer((model, model.backbone.block2.pooling), background)
+            e = shap.DeepExplainer(
+                (model, model.backbone.block2.pooling), background)
         elif layer == 'block2BN':
-            e = shap.DeepExplainer((model, model.backbone.block2.BN), background)
+            e = shap.DeepExplainer(
+                (model, model.backbone.block2.BN), background)
         else:
-            raise ValueError('layer not added yet, add another elif by yourself in shap_mid method')
+            raise ValueError(
+                'layer not added yet, add another elif by yourself in shap_mid method')
         del background
         print("deep explainer successfully initialized")
         # explain the data and save as numpy array
@@ -333,16 +435,35 @@ class Multask_Wrapper:
             name = name[0].split('/')[-1]
             shap_value = e.shap_values(mri)
             if task == 'ADD':
-                print('shap_value\'s shape for the AD probability is', shap_value[1].shape)
-                print('after summing over channel dimension, shape is', shap_value[1].squeeze().sum(0).shape)
-                np.save(path + 'shap_{}_{}'.format(task, name), shap_value[1].squeeze().sum(0))
+                print(
+                    'shap_value\'s shape for the AD probability is',
+                    shap_value[1].shape)
+                print(
+                    'after summing over channel dimension, shape is',
+                    shap_value[1].squeeze().sum(0).shape)
+                np.save(
+                    path +
+                    'shap_{}_{}'.format(
+                        task,
+                        name),
+                    shap_value[1].squeeze().sum(0))
             elif task == 'COG':
-                print('shap_value\'s shape for the COG score is', shap_value.shape)
-                print('after summing over channel dimension, shape is', shap_value.squeeze().sum(0).shape)
-                np.save(path + 'shap_{}_{}'.format(task, name), shap_value.squeeze().sum(0))
+                print(
+                    'shap_value\'s shape for the COG score is',
+                    shap_value.shape)
+                print(
+                    'after summing over channel dimension, shape is',
+                    shap_value.squeeze().sum(0).shape)
+                np.save(
+                    path +
+                    'shap_{}_{}'.format(
+                        task,
+                        name),
+                    shap_value.squeeze().sum(0))
 
-    ###############################################################################################################
-    # below methods are internal methods and won't be called from outside of the class
+    ##########################################################################
+    # below methods are internal methods and won't be called from outside of
+    # the class
     def get_losses(self, tasks):
         losses = []
         for task in tasks:
@@ -360,19 +481,40 @@ class Multask_Wrapper:
         return label
 
     def prepare_dataloader(self, ratio={}):
-        patch_ = (None, None) if self.backbone_model != "FCN" else ("random", "random")
+        patch_ = (
+            None,
+            None) if self.backbone_model != "FCN" else (
+            "random",
+            "random")
         for task in self.tasks:
             batch_size = self.config[task]['batch_size']
-            train_data = TaskData(task, task_config=self.config[task], csv_dir=self.csv_dir, stage='train', seed=self.seed, patch=patch_[0])
+            train_data = TaskData(
+                task,
+                task_config=self.config[task],
+                csv_dir=self.csv_dir,
+                stage='train',
+                seed=self.seed,
+                patch=patch_[0])
             sample_weight = train_data.get_sample_weights(ratio)
-            sampler = torch.utils.data.sampler.WeightedRandomSampler(sample_weight, len(sample_weight))
-            self.train_dataloaders.append(DataLoader(train_data, batch_size=batch_size, sampler=sampler, drop_last=True, num_workers=1))
-        self.iter_per_epoch = min(len(dataloader) for dataloader in self.train_dataloaders)
+            sampler = torch.utils.data.sampler.WeightedRandomSampler(
+                sample_weight, len(sample_weight))
+            self.train_dataloaders.append(
+                DataLoader(
+                    train_data,
+                    batch_size=batch_size,
+                    sampler=sampler,
+                    drop_last=True,
+                    num_workers=1))
+        self.iter_per_epoch = min(len(dataloader)
+                                  for dataloader in self.train_dataloaders)
 
     @timeit
     def train_an_epoch(self):
         self.set_train_status(True)
-        iter_train_dataloaders = {i: iter(self.train_dataloaders[i]) for i in range(self.n_tasks)}
+        iter_train_dataloaders = {
+            i: iter(
+                self.train_dataloaders[i]) for i in range(
+                self.n_tasks)}
         for _ in range(self.iter_per_epoch):
             self.zero_grad_all()
             for i in range(self.n_tasks):
@@ -383,20 +525,25 @@ class Multask_Wrapper:
 
     @timeit
     def valid_an_epoch(self, metric='AUC'):
-        self.gen_score(['valid'], load_weight=False)  # using default thres value to generate score for validation set
+        # using default thres value to generate score for validation set
+        self.gen_score(['valid'], load_weight=False)
         if metric == 'MCC':
-            thres = self.get_optimal_thres('valid')       # get optimal thres for validation
-            self.gen_score(['valid'], thres, load_weight=False) # apply the optimal thres on validation to generate score and pred
-            metric = perform_table([self.tb_log_dir+'valid_eval.csv'])
+            # get optimal thres for validation
+            thres = self.get_optimal_thres('valid')
+            # apply the optimal thres on validation to generate score and pred
+            self.gen_score(['valid'], thres, load_weight=False)
+            metric = perform_table([self.tb_log_dir + 'valid_eval.csv'])
         elif metric == 'AUC':
-            metric = ROC_PR_curves([self.tb_log_dir+'valid_eval.csv'], 'valid')
+            metric = ROC_PR_curves(
+                [self.tb_log_dir + 'valid_eval.csv'], 'valid')
         return metric
 
     def forward_task(self, i, inputs, labels):
         labels = self.cast_labels(labels, self.tasks[i])
         inputs, labels = inputs.to(self.device), labels.to(self.device)
         preds = self.MLPs[i](self.backbone(inputs))
-        loss = self.losses[i](preds, labels) * float(self.config[self.tasks[i]]['factor'])
+        loss = self.losses[i](preds, labels) * \
+            float(self.config[self.tasks[i]]['factor'])
         return preds, loss, labels
 
     def set_train_status(self, mode):
@@ -416,12 +563,21 @@ class Multask_Wrapper:
 
     def saveWeights(self, clean_previous=True):
         if clean_previous:
-            files = glob(self.checkpoint_dir+'*.pth')
+            files = glob(self.checkpoint_dir + '*.pth')
             for f in files:
                 os.remove(f)
-        torch.save(self.backbone.state_dict(), '{}backbone_{}.pth'.format(self.checkpoint_dir, self.epoch))
+        torch.save(
+            self.backbone.state_dict(),
+            '{}backbone_{}.pth'.format(
+                self.checkpoint_dir,
+                self.epoch))
         for task, model in zip(self.tasks, self.MLPs):
-            torch.save(model.state_dict(), '{}{}_{}.pth'.format(self.checkpoint_dir, task, self.epoch))
+            torch.save(
+                model.state_dict(),
+                '{}{}_{}.pth'.format(
+                    self.checkpoint_dir,
+                    task,
+                    self.epoch))
 
     def loadWeights(self):
         self.load_backbone_Weights()
@@ -430,10 +586,10 @@ class Multask_Wrapper:
     def load_backbone_Weights(self):
         target_file = list(glob(self.checkpoint_dir + 'backbone*.pth'))[0]
         print('loading ', target_file)
-	weights = torch.load(target_file, map_location='cpu')
+        weights = torch.load(target_file, map_location='cpu')
         try:
             self.backbone.load_state_dict(weights)
-        except:
+        except BaseException:
             self.backbone.load_state_dict(remove_module(weights))
 
     def load_MLP_weights(self):
@@ -441,9 +597,16 @@ class Multask_Wrapper:
             target_file = list(glob(self.checkpoint_dir + task + '*.pth'))[0]
             print('loading ', target_file)
             try:
-                self.MLPs[i].load_state_dict(torch.load(target_file, map_location=torch.device('cpu')))
-            except:
-                self.MLPs[i].load_state_dict(remove_module(torch.load(target_file, map_location=torch.device('cpu'))))
+                self.MLPs[i].load_state_dict(
+                    torch.load(
+                        target_file,
+                        map_location=torch.device('cpu')))
+            except BaseException:
+                self.MLPs[i].load_state_dict(
+                    remove_module(
+                        torch.load(
+                            target_file,
+                            map_location=torch.device('cpu'))))
 
     def needToSave(self):
         if self.cur_metric > self.optimal_metric:
@@ -452,7 +615,13 @@ class Multask_Wrapper:
         return False
 
     def adjust_learning_rate(self):
-        if self.epoch in [round(self.num_epochs * 0.333), round(self.num_epochs * 0.666)]:
+        if self.epoch in [
+            round(
+                self.num_epochs *
+                0.333),
+            round(
+                self.num_epochs *
+                0.666)]:
             for param_group in self.backbone_optim.param_groups:
                 param_group['lr'] *= 0.2
             for optim in self.MLPs_optim:
@@ -464,7 +633,3 @@ class Multask_Wrapper:
 if __name__ == "__main__":
     model = resnet18()
     print(model)
-
-
-
-
