@@ -431,7 +431,6 @@ class Multask_Wrapper:
         target_file = list(glob(self.checkpoint_dir + 'backbone*.pth'))[0]
         print('loading ', target_file)
 	weights = torch.load(target_file, map_location='cpu')
-
         try:
             self.backbone.load_state_dict(weights)
         except:
