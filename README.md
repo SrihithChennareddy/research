@@ -9,18 +9,19 @@ We demonstrated that the framework compares favorably with the diagnostic perfor
 
 <img src="FigureTable/Repo/Figure1.png" width="2000"/>
 
+
+### Installation
+Recommend to only clone the last version to avoid getting all commits during the development stage. 
+```bash
+git clone --depth 1 git@github.com:SrihithChennareddy/research.git
+```
+
 ### Prerequisites
 
 Run below command to install required packages
 
 ```bash
 pip install -r requirements.txt
-```
-
-### Installation
-Recommend to only clone the last version to avoid getting all commits during the development stage. 
-```bash
-git clone --depth 1 git@github.com:SrihithChennareddy/research.git
 ```
 
 ## Documentation
